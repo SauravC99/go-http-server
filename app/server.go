@@ -25,7 +25,7 @@ func main() {
 
 	fmt.Println("Connection accept")
 
-	recievedData := make([]byte, 1024)
+	recievedData := make([]byte, 1024) //may need to be bigger
 
 	_, err = conn.Read(recievedData)
 	if err != nil {
@@ -35,11 +35,21 @@ func main() {
 
 	fmt.Println("Read incoming data:\n", string(recievedData))
 
+	x := 0
+
 	// need 2 sets of \r\n for end of headers section
-	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	if err != nil {
-		fmt.Println("Error writing to connection: ", err.Error())
-		os.Exit(1)
+	if x == 1 {
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			os.Exit(1)
+		}
+	} else {
+		_, err = conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			os.Exit(1)
+		}
 	}
 
 	conn.Close()
