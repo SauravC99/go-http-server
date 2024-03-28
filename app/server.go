@@ -40,6 +40,7 @@ func main() {
 	request := strings.Split(string(recievedData), "\r\n")
 
 	start_line := strings.Split(request[0], " ")
+	agent := strings.Split(request[2], " ")
 
 	http_method := start_line[0]
 	path := start_line[1]
@@ -47,6 +48,7 @@ func main() {
 	fmt.Println(request)
 	fmt.Println(start_line)
 	fmt.Println(http_method)
+	fmt.Println(agent)
 	fmt.Println(path)
 
 	// need 2 sets of \r\n for end of headers section
@@ -64,6 +66,17 @@ func main() {
 		length := "Content-Length: " + strconv.Itoa(len(content)) + "\r\n\r\n"
 
 		response = response + length + content
+		_, err = conn.Write([]byte(response))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			os.Exit(1)
+		}
+	} else if strings.HasPrefix(path, "/user-agent") {
+		response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n"
+		length := "Content-Length: " + strconv.Itoa(len(agent[1])) + "\r\n\r\n"
+		body := agent[1]
+
+		response = response + length + body
 		_, err = conn.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
