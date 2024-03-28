@@ -11,6 +11,11 @@ import (
 // headers section \r\n\r\n body section
 
 func main() {
+	const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
+	const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
+	const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
+	const END_HEADER_BLOCK string = "\r\n"
+
 	fmt.Println("Server started")
 
 	listener, err := net.Listen("tcp", "0.0.0.0:4221")
@@ -53,7 +58,7 @@ func main() {
 
 	// need 2 sets of \r\n for end of headers section
 	if path == "/" {
-		response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"
+		response := STATUS_200_OK + CONTENT_PLAIN + END_HEADER_BLOCK
 		_, err = conn.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
@@ -61,7 +66,7 @@ func main() {
 		}
 	} else if strings.HasPrefix(path, "/echo/") {
 		//echo the request in body
-		response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n"
+		response := STATUS_200_OK + CONTENT_PLAIN
 		content := strings.TrimPrefix(path, "/echo/")
 		length := "Content-Length: " + strconv.Itoa(len(content)) + "\r\n\r\n"
 
@@ -72,7 +77,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else if strings.HasPrefix(path, "/user-agent") {
-		response := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n"
+		response := STATUS_200_OK + CONTENT_PLAIN
 		length := "Content-Length: " + strconv.Itoa(len(agent[1])) + "\r\n\r\n"
 		body := agent[1]
 
@@ -83,7 +88,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		response := "HTTP/1.1 404 Not Found\r\n\r\n"
+		response := STATUS_404_ERR + END_HEADER_BLOCK
 		_, err = conn.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
