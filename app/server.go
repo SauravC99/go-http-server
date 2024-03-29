@@ -40,21 +40,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Read incoming data:\n", string(recievedData))
-
 	request := strings.Split(string(recievedData), "\r\n")
 
 	start_line := strings.Split(request[0], " ")
 	agent := strings.Split(request[2], " ")
 
-	http_method := start_line[0]
+	//http_method := start_line[0]
 	path := start_line[1]
-
-	fmt.Println(request)
-	fmt.Println(start_line)
-	fmt.Println(http_method)
-	fmt.Println(agent)
-	fmt.Println(path)
 
 	// need 2 sets of \r\n for end of headers section
 	if path == "/" {
