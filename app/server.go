@@ -31,15 +31,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, err := listener.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+
+		fmt.Println("Connection accept")
+		go connectAndRespond(conn)
 	}
-
-	fmt.Println("Connection accept")
-
-	connectAndRespond(conn)
 }
 
 func connectAndRespond(connection net.Conn) {
