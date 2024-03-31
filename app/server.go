@@ -20,7 +20,8 @@ type RequestHeaders struct {
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
 const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
 const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
-const END_HEADER_BLOCK string = "\r\n"
+const END_HEADER_LINE string = "\r\n"
+const END_HEADER_BLOCK string = "\r\n\r\n"
 
 func main() {
 	fmt.Println("Server started")
@@ -49,11 +50,9 @@ func connectAndRespond(connection net.Conn) {
 		fmt.Println("Failed to read headers: ", err.Error())
 	}
 
-	fmt.Println(headers)
-
 	// need 2 sets of \r\n for end of headers section
 	if headers.Path == "/" {
-		response := STATUS_200_OK + CONTENT_PLAIN + END_HEADER_BLOCK
+		response := STATUS_200_OK + CONTENT_PLAIN + END_HEADER_LINE
 		_, err = connection.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
@@ -63,7 +62,7 @@ func connectAndRespond(connection net.Conn) {
 		//echo the request in body
 		response := STATUS_200_OK + CONTENT_PLAIN
 		content := strings.TrimPrefix(headers.Path, "/echo/")
-		length := "Content-Length: " + strconv.Itoa(len(content)) + "\r\n\r\n"
+		length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
 
 		response = response + length + content
 		_, err = connection.Write([]byte(response))
@@ -73,7 +72,7 @@ func connectAndRespond(connection net.Conn) {
 		}
 	} else if strings.HasPrefix(headers.Path, "/user-agent") {
 		response := STATUS_200_OK + CONTENT_PLAIN
-		length := "Content-Length: " + strconv.Itoa(len(headers.Agent)) + "\r\n\r\n"
+		length := "Content-Length: " + strconv.Itoa(len(headers.Agent)) + END_HEADER_BLOCK
 		body := headers.Agent
 
 		response = response + length + body
@@ -83,7 +82,7 @@ func connectAndRespond(connection net.Conn) {
 			os.Exit(1)
 		}
 	} else {
-		response := STATUS_404_ERR + END_HEADER_BLOCK
+		response := STATUS_404_ERR + END_HEADER_LINE
 		_, err = connection.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
@@ -103,7 +102,7 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 		return nil, err
 	}
 
-	request := strings.Split(string(recievedData), "\r\n")
+	request := strings.Split(string(recievedData), END_HEADER_LINE)
 
 	start_line := strings.Split(request[0], " ")
 	host := strings.Split(request[1], " ")
