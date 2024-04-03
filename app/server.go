@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -20,11 +21,15 @@ type RequestHeaders struct {
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
 const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
 const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
+const CONTENT_APP string = "Content-Type: application/octet-stream\r\n"
 const END_HEADER_LINE string = "\r\n"
 const END_HEADER_BLOCK string = "\r\n\r\n"
 
 func main() {
 	fmt.Println("Server started")
+
+	directoryPtr := flag.String("directory", "", "Directory for file")
+	flag.Parse()
 
 	listener, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -40,11 +45,11 @@ func main() {
 		}
 
 		fmt.Println("Connection accept")
-		go connectAndRespond(conn)
+		go connectAndRespond(conn, directoryPtr)
 	}
 }
 
-func connectAndRespond(connection net.Conn) {
+func connectAndRespond(connection net.Conn, directoryPtr *string) {
 	headers, err := parseHeaders(connection)
 	if err != nil {
 		fmt.Println("Failed to read headers: ", err.Error())
@@ -76,6 +81,30 @@ func connectAndRespond(connection net.Conn) {
 		body := headers.Agent
 
 		response = response + length + body
+		_, err = connection.Write([]byte(response))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			os.Exit(1)
+		}
+	} else if strings.HasPrefix(headers.Path, "/files") {
+		fPath := parseFilePath(directoryPtr, headers.Path)
+		file, err := os.ReadFile(fPath)
+		if err != nil {
+			fmt.Println("Error reading file: ", err.Error())
+			response := STATUS_404_ERR + END_HEADER_LINE
+			_, err = connection.Write([]byte(response))
+			if err != nil {
+				fmt.Println("Error writing to connection: ", err.Error())
+				os.Exit(1)
+			}
+			connection.Close()
+			return
+		}
+
+		response := STATUS_200_OK + CONTENT_APP
+		length := "Content-Length: " + strconv.Itoa(len(string(file))) + END_HEADER_BLOCK
+
+		response = response + length + string(file)
 		_, err = connection.Write([]byte(response))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
@@ -117,6 +146,20 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 		Host:   host[1],
 		Agent:  agent[1],
 	}, nil
+}
+
+func parseFilePath(directoryPtr *string, path string) string {
+	fileName := strings.TrimPrefix(path, "/files/")
+	fullPath := ""
+
+	// In case directory provided does not have '/' at end
+	if strings.HasSuffix(*directoryPtr, "/") {
+		fullPath = *directoryPtr + fileName
+	} else {
+		fullPath = *directoryPtr + "/" + fileName
+	}
+
+	return fullPath
 }
 
 /*
