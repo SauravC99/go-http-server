@@ -9,13 +9,14 @@ import (
 	"strings"
 )
 
-// headers section \r\n\r\n body section
-
 type RequestHeaders struct {
-	Method string
-	Path   string
-	Host   string
-	Agent  string
+	Method        string
+	Path          string
+	Host          string
+	Agent         string
+	ContentType   string
+	ContentLength string
+	Body          string
 }
 
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
@@ -111,7 +112,7 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			os.Exit(1)
 		}
 	} else if strings.HasPrefix(headers.Path, "/test") {
-		fmt.Println(headers)
+		fmt.Printf("%+v\n", *headers)
 		r := STATUS_200_OK + END_HEADER_LINE
 		connection.Write([]byte(r))
 	} else {
@@ -143,6 +144,9 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 
 	host := ""
 	agent := ""
+	contentType := ""
+	contentLen := ""
+	body := ""
 
 	for _, line := range request {
 		if strings.HasPrefix(line, "Host:") {
@@ -151,14 +155,28 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 		} else if strings.HasPrefix(line, "User-Agent:") {
 			temp := strings.Split(line, " ")
 			agent = temp[1]
+		} else if strings.HasPrefix(line, "Content-Type:") {
+			temp := strings.Split(line, " ")
+			contentType = temp[1]
+		} else if strings.HasPrefix(line, "Content-Length:") {
+			temp := strings.Split(line, " ")
+			contentLen = temp[1]
 		}
+	}
+	// headers section \r\n\r\n body section
+	if len(strings.Split(string(recievedData), END_HEADER_BLOCK)) > 1 {
+		temp := strings.Split(string(recievedData), END_HEADER_BLOCK)
+		body = temp[1]
 	}
 
 	return &RequestHeaders{
-		Method: http_method,
-		Path:   path,
-		Host:   host,
-		Agent:  agent,
+		Method:        http_method,
+		Path:          path,
+		Host:          host,
+		Agent:         agent,
+		ContentType:   contentType,
+		ContentLength: contentLen,
+		Body:          body,
 	}, nil
 }
 
