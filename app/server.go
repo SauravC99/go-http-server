@@ -110,6 +110,10 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			fmt.Println("Error writing to connection: ", err.Error())
 			os.Exit(1)
 		}
+	} else if strings.HasPrefix(headers.Path, "/test") {
+		fmt.Println(headers)
+		r := STATUS_200_OK + END_HEADER_LINE
+		connection.Write([]byte(r))
 	} else {
 		response := STATUS_404_ERR + END_HEADER_LINE
 		_, err = connection.Write([]byte(response))
@@ -134,17 +138,27 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 	request := strings.Split(string(recievedData), END_HEADER_LINE)
 
 	start_line := strings.Split(request[0], " ")
-	host := strings.Split(request[1], " ")
-	agent := strings.Split(request[2], " ")
-
 	http_method := start_line[0]
 	path := start_line[1]
+
+	host := ""
+	agent := ""
+
+	for _, line := range request {
+		if strings.HasPrefix(line, "Host:") {
+			temp := strings.Split(line, " ")
+			host = temp[1]
+		} else if strings.HasPrefix(line, "User-Agent:") {
+			temp := strings.Split(line, " ")
+			agent = temp[1]
+		}
+	}
 
 	return &RequestHeaders{
 		Method: http_method,
 		Path:   path,
-		Host:   host[1],
-		Agent:  agent[1],
+		Host:   host,
+		Agent:  agent,
 	}, nil
 }
 
