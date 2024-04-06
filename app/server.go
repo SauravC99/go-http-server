@@ -20,7 +20,9 @@ type RequestHeaders struct {
 }
 
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
+const STATUS_201_CREATED string = "HTTP/1.1 201 Created\r\n"
 const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
+const STATUS_500_ERR string = "HTTP/1.1 500 Internal Server Error\r\n"
 const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
 const CONTENT_APP string = "Content-Type: application/octet-stream\r\n"
 const END_HEADER_LINE string = "\r\n"
@@ -91,27 +93,65 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 		}
 	} else if strings.HasPrefix(headers.Path, "/files") {
 		fPath := parseFilePath(directoryPtr, headers.Path)
-		file, err := os.ReadFile(fPath)
-		if err != nil {
-			fmt.Println("Error reading file: ", err.Error())
-			response := STATUS_404_ERR + END_HEADER_LINE
+
+		if headers.Method == "GET" {
+			file, err := os.ReadFile(fPath)
+			if err != nil {
+				fmt.Println("Error reading file: ", err.Error())
+				response := STATUS_404_ERR + END_HEADER_LINE
+				_, err = connection.Write([]byte(response))
+				if err != nil {
+					fmt.Println("Error writing to connection: ", err.Error())
+					os.Exit(1)
+				}
+				connection.Close()
+				return
+			}
+
+			response := STATUS_200_OK + CONTENT_APP
+			length := "Content-Length: " + strconv.Itoa(len(string(file))) + END_HEADER_BLOCK
+
+			response = response + length + string(file)
 			_, err = connection.Write([]byte(response))
 			if err != nil {
 				fmt.Println("Error writing to connection: ", err.Error())
 				os.Exit(1)
 			}
-			connection.Close()
-			return
-		}
+		} else if headers.Method == "POST" {
+			file, err := os.Create(fPath)
+			if err != nil {
+				fmt.Println("Error creating file: ", err.Error())
+				response := STATUS_500_ERR + END_HEADER_LINE
+				_, err = connection.Write([]byte(response))
+				if err != nil {
+					fmt.Println("Error writing to connection: ", err.Error())
+					os.Exit(1)
+				}
+				connection.Close()
+				return
+			}
+			// Replaces null characters "\x00" with empty string; needed bc this is binary data
+			parsedBody := strings.ReplaceAll(headers.Body, "\x00", "")
+			_, err = file.WriteString(parsedBody)
+			if err != nil {
+				fmt.Println("Error writing file: ", err.Error())
+				response := STATUS_500_ERR + END_HEADER_LINE
+				_, err = connection.Write([]byte(response))
+				if err != nil {
+					fmt.Println("Error writing to connection: ", err.Error())
+					os.Exit(1)
+				}
+				connection.Close()
+				return
+			}
+			file.Close()
 
-		response := STATUS_200_OK + CONTENT_APP
-		length := "Content-Length: " + strconv.Itoa(len(string(file))) + END_HEADER_BLOCK
-
-		response = response + length + string(file)
-		_, err = connection.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
+			response := STATUS_201_CREATED + END_HEADER_LINE
+			_, err = connection.Write([]byte(response))
+			if err != nil {
+				fmt.Println("Error writing to connection: ", err.Error())
+				os.Exit(1)
+			}
 		}
 	} else if strings.HasPrefix(headers.Path, "/test") {
 		fmt.Printf("%+v\n", *headers)
