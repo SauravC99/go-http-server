@@ -22,6 +22,7 @@ type RequestHeaders struct {
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
 const STATUS_201_CREATED string = "HTTP/1.1 201 Created\r\n"
 const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
+const STATUS_405_NOTALLOW string = "HTTP/1.1 405 Method Not Allowed\r\n"
 const STATUS_500_ERR string = "HTTP/1.1 500 Internal Server Error\r\n"
 const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
 const CONTENT_APP string = "Content-Type: application/octet-stream\r\n"
@@ -147,6 +148,15 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			file.Close()
 
 			response := STATUS_201_CREATED + END_HEADER_LINE
+			_, err = connection.Write([]byte(response))
+			if err != nil {
+				fmt.Println("Error writing to connection: ", err.Error())
+				os.Exit(1)
+			}
+		} else {
+			// Code 405 must include allow header field in resposne
+			allowed := "Allow: GET, POST" + END_HEADER_LINE
+			response := STATUS_405_NOTALLOW + allowed + END_HEADER_LINE
 			_, err = connection.Write([]byte(response))
 			if err != nil {
 				fmt.Println("Error writing to connection: ", err.Error())
