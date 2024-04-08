@@ -201,16 +201,17 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 	body := ""
 
 	for _, line := range request {
-		if strings.HasPrefix(line, "Host:") {
+		switch {
+		case strings.HasPrefix(line, "Host:"):
 			temp := strings.Split(line, " ")
 			host = temp[1]
-		} else if strings.HasPrefix(line, "User-Agent:") {
+		case strings.HasPrefix(line, "User-Agent:"):
 			temp := strings.Split(line, " ")
 			agent = temp[1]
-		} else if strings.HasPrefix(line, "Content-Type:") {
+		case strings.HasPrefix(line, "Content-Type:"):
 			temp := strings.Split(line, " ")
 			contentType = temp[1]
-		} else if strings.HasPrefix(line, "Content-Length:") {
+		case strings.HasPrefix(line, "Content-Length:"):
 			temp := strings.Split(line, " ")
 			contentLen = temp[1]
 		}
