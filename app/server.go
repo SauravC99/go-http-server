@@ -63,24 +63,13 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 
 	// need 2 sets of \r\n for end of headers section
 	if headers.Path == "/" {
-		response := STATUS_200_OK + CONTENT_PLAIN + END_HEADER_LINE
-		_, err = connection.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
-		}
+		respond202Plain(connection, "")
+		return
 	} else if strings.HasPrefix(headers.Path, "/echo/") {
 		//echo the request in body
-		response := STATUS_200_OK + CONTENT_PLAIN
 		content := strings.TrimPrefix(headers.Path, "/echo/")
-		length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
-
-		response = response + length + content
-		_, err = connection.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
-		}
+		respond202Plain(connection, content)
+		return
 	} else if strings.HasPrefix(headers.Path, "/user-agent") {
 		response := STATUS_200_OK + CONTENT_PLAIN
 		length := "Content-Length: " + strconv.Itoa(len(headers.Agent)) + END_HEADER_BLOCK
@@ -176,6 +165,19 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 		}
 	}
 
+	connection.Close()
+}
+
+func respond202Plain(connection net.Conn, content string) {
+	response := STATUS_200_OK + CONTENT_PLAIN
+	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	body := content
+
+	response = response + length + body
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
 	connection.Close()
 }
 
