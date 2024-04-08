@@ -61,26 +61,18 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 		fmt.Println("Failed to read headers: ", err.Error())
 	}
 
-	// need 2 sets of \r\n for end of headers section
 	if headers.Path == "/" {
-		respond202Plain(connection, "")
+		respond200Plain(connection, "")
 		return
 	} else if strings.HasPrefix(headers.Path, "/echo/") {
 		//echo the request in body
 		content := strings.TrimPrefix(headers.Path, "/echo/")
-		respond202Plain(connection, content)
+		respond200Plain(connection, content)
 		return
 	} else if strings.HasPrefix(headers.Path, "/user-agent") {
-		response := STATUS_200_OK + CONTENT_PLAIN
-		length := "Content-Length: " + strconv.Itoa(len(headers.Agent)) + END_HEADER_BLOCK
-		body := headers.Agent
-
-		response = response + length + body
-		_, err = connection.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
-		}
+		content := headers.Agent
+		respond200Plain(connection, content)
+		return
 	} else if strings.HasPrefix(headers.Path, "/files") {
 		fPath := parseFilePath(directoryPtr, headers.Path)
 
@@ -88,36 +80,18 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			file, err := os.ReadFile(fPath)
 			if err != nil {
 				fmt.Println("Error reading file: ", err.Error())
-				response := STATUS_404_ERR + END_HEADER_LINE
-				_, err = connection.Write([]byte(response))
-				if err != nil {
-					fmt.Println("Error writing to connection: ", err.Error())
-					os.Exit(1)
-				}
-				connection.Close()
+				respond404(connection)
 				return
 			}
 
-			response := STATUS_200_OK + CONTENT_APP
-			length := "Content-Length: " + strconv.Itoa(len(string(file))) + END_HEADER_BLOCK
-
-			response = response + length + string(file)
-			_, err = connection.Write([]byte(response))
-			if err != nil {
-				fmt.Println("Error writing to connection: ", err.Error())
-				os.Exit(1)
-			}
+			content := string(file)
+			respond200App(connection, content)
+			return
 		} else if headers.Method == "POST" {
 			file, err := os.Create(fPath)
 			if err != nil {
 				fmt.Println("Error creating file: ", err.Error())
-				response := STATUS_500_ERR + END_HEADER_LINE
-				_, err = connection.Write([]byte(response))
-				if err != nil {
-					fmt.Println("Error writing to connection: ", err.Error())
-					os.Exit(1)
-				}
-				connection.Close()
+				respond500(connection)
 				return
 			}
 			// Replaces null characters "\x00" with empty string; needed bc this is binary data
@@ -125,59 +99,26 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			_, err = file.WriteString(parsedBody)
 			if err != nil {
 				fmt.Println("Error writing file: ", err.Error())
-				response := STATUS_500_ERR + END_HEADER_LINE
-				_, err = connection.Write([]byte(response))
-				if err != nil {
-					fmt.Println("Error writing to connection: ", err.Error())
-					os.Exit(1)
-				}
-				connection.Close()
+				respond500(connection)
 				return
 			}
 			file.Close()
 
-			response := STATUS_201_CREATED + END_HEADER_LINE
-			_, err = connection.Write([]byte(response))
-			if err != nil {
-				fmt.Println("Error writing to connection: ", err.Error())
-				os.Exit(1)
-			}
+			respond201(connection, fPath, headers.ContentType, parsedBody)
+			return
 		} else {
-			// Code 405 must include allow header field in resposne
-			allowed := "Allow: GET, POST" + END_HEADER_LINE
-			response := STATUS_405_NOTALLOW + allowed + END_HEADER_LINE
-			_, err = connection.Write([]byte(response))
-			if err != nil {
-				fmt.Println("Error writing to connection: ", err.Error())
-				os.Exit(1)
-			}
+			respond405(connection)
+			return
 		}
 	} else if strings.HasPrefix(headers.Path, "/test") {
 		fmt.Printf("%+v\n", *headers)
 		r := STATUS_200_OK + END_HEADER_LINE
 		connection.Write([]byte(r))
 	} else {
-		response := STATUS_404_ERR + END_HEADER_LINE
-		_, err = connection.Write([]byte(response))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
-		}
+		respond404(connection)
+		return
 	}
 
-	connection.Close()
-}
-
-func respond202Plain(connection net.Conn, content string) {
-	response := STATUS_200_OK + CONTENT_PLAIN
-	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
-	body := content
-
-	response = response + length + body
-	_, err := connection.Write([]byte(response))
-	if err != nil {
-		fmt.Println("Error writing to connection: ", err.Error())
-	}
 	connection.Close()
 }
 
@@ -247,4 +188,73 @@ func parseFilePath(directoryPtr *string, path string) string {
 	}
 
 	return fullPath
+}
+
+func respond200Plain(connection net.Conn, content string) {
+	response := STATUS_200_OK + CONTENT_PLAIN
+	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	body := content
+
+	response = response + length + body
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond200App(connection net.Conn, content string) {
+	response := STATUS_200_OK + CONTENT_APP
+	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	body := content
+
+	response = response + length + body
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond201(connection net.Conn, filepath string, cType string, content string) {
+	response := STATUS_201_CREATED
+	contentType := "Content-Type: " + cType + END_HEADER_LINE
+	location := "Location: " + filepath + END_HEADER_BLOCK
+	body := content
+
+	response = response + contentType + location + body
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond404(connection net.Conn) {
+	response := STATUS_404_ERR + END_HEADER_LINE
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond405(connection net.Conn) {
+	// Code 405 must include allow header field in response
+	allowed := "Allow: GET, POST" + END_HEADER_LINE
+	response := STATUS_405_NOTALLOW + allowed + END_HEADER_LINE
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond500(connection net.Conn) {
+	response := STATUS_500_ERR + END_HEADER_LINE
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
 }
