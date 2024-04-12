@@ -33,11 +33,11 @@ const CONTENT_TYPE string = "Content-Type: "
 const LOCATION_HEADER string = "Location: "
 
 func main() {
-	fmt.Println("Server started")
-
 	directoryPtr := flag.String("directory", "", "Directory for file")
 	portPtr := flag.String("port", "4221", "Port to bind to")
 	flag.Parse()
+
+	fmt.Println("Server started")
 
 	listener, err := net.Listen("tcp", "0.0.0.0:"+*portPtr)
 	if err != nil {
