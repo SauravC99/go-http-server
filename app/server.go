@@ -28,6 +28,9 @@ const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
 const CONTENT_APP string = "Content-Type: application/octet-stream\r\n"
 const END_HEADER_LINE string = "\r\n"
 const END_HEADER_BLOCK string = "\r\n\r\n"
+const CONTENT_LENGTH string = "Content-Length: "
+const CONTENT_TYPE string = "Content-Type: "
+const LOCATION_HEADER string = "Location: "
 
 func main() {
 	fmt.Println("Server started")
@@ -192,7 +195,7 @@ func parseFilePath(directoryPtr *string, path string) string {
 
 func respond200Plain(connection net.Conn, content string) {
 	response := STATUS_200_OK + CONTENT_PLAIN
-	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	length := CONTENT_LENGTH + strconv.Itoa(len(content)) + END_HEADER_BLOCK
 	body := content
 
 	response = response + length + body
@@ -205,7 +208,7 @@ func respond200Plain(connection net.Conn, content string) {
 
 func respond200App(connection net.Conn, content string) {
 	response := STATUS_200_OK + CONTENT_APP
-	length := "Content-Length: " + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	length := CONTENT_LENGTH + strconv.Itoa(len(content)) + END_HEADER_BLOCK
 	body := content
 
 	response = response + length + body
@@ -218,8 +221,8 @@ func respond200App(connection net.Conn, content string) {
 
 func respond201(connection net.Conn, filepath string, cType string, content string) {
 	response := STATUS_201_CREATED
-	contentType := "Content-Type: " + cType + END_HEADER_LINE
-	location := "Location: " + filepath + END_HEADER_BLOCK
+	contentType := CONTENT_TYPE + cType + END_HEADER_LINE
+	location := LOCATION_HEADER + filepath + END_HEADER_BLOCK
 	body := content
 
 	response = response + contentType + location + body
