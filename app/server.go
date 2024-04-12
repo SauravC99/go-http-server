@@ -113,16 +113,10 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 			respond405(connection)
 			return
 		}
-	} else if strings.HasPrefix(headers.Path, "/test") {
-		fmt.Printf("%+v\n", *headers)
-		r := STATUS_200_OK + END_HEADER_LINE
-		connection.Write([]byte(r))
 	} else {
 		respond404(connection)
 		return
 	}
-
-	connection.Close()
 }
 
 func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
