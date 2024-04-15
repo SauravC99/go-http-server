@@ -33,7 +33,7 @@ const CONTENT_TYPE string = "Content-Type: "
 const LOCATION_HEADER string = "Location: "
 
 func main() {
-	directoryPtr := flag.String("directory", "", "Directory for file")
+	directoryPtr := flag.String("directory", "", "Directory for file hosting (download and upload)")
 	portPtr := flag.String("port", "4221", "Port to bind to")
 	flag.Parse()
 
