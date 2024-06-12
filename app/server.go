@@ -144,19 +144,19 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 
 	for _, line := range request {
 		switch {
-		case strings.HasPrefix(line, "Host:"):
+		case strings.HasPrefix(strings.ToLower(line), "host:"):
 			temp := strings.Split(line, " ")
 			host = temp[1]
-		case strings.HasPrefix(line, "User-Agent:"):
+		case strings.HasPrefix(strings.ToLower(line), "user-agent:"):
 			temp := strings.Split(line, " ")
 			agent = temp[1]
-		case strings.HasPrefix(line, "Content-Type:"):
+		case strings.HasPrefix(strings.ToLower(line), "content-type:"):
 			temp := strings.Split(line, " ")
 			contentType = temp[1]
-		case strings.HasPrefix(line, "Content-Length:"):
+		case strings.HasPrefix(strings.ToLower(line), "content-length:"):
 			temp := strings.Split(line, " ")
 			contentLen = temp[1]
-		case strings.HasPrefix(line, "Accept-Encoding:"):
+		case strings.HasPrefix(strings.ToLower(line), "accept-encoding:"):
 			temp := strings.Split(line, " ")
 			acceptEncoding = temp[1]
 		}
