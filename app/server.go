@@ -165,7 +165,18 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 			contentLen = temp[1]
 		case strings.HasPrefix(strings.ToLower(line), "accept-encoding:"):
 			temp := strings.Split(line, " ")
-			acceptEncoding = temp[1]
+			//handle multiple compression scheme values
+			if len(temp) > 2 {
+				encodings := temp[1:]
+				for _, line := range encodings {
+					line = strings.ReplaceAll(line, ",", "")
+					if strings.ToLower(line) == "gzip" {
+						acceptEncoding = "gzip"
+					}
+				}
+			} else {
+				acceptEncoding = temp[1]
+			}
 		}
 	}
 	// headers section \r\n\r\n body section
