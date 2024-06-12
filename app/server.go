@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"net"
@@ -165,11 +167,12 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 			contentLen = temp[1]
 		case strings.HasPrefix(strings.ToLower(line), "accept-encoding:"):
 			temp := strings.Split(line, " ")
-			//handle multiple compression scheme values
+			// Handle multiple compression scheme values
 			if len(temp) > 2 {
 				encodings := temp[1:]
 				for _, line := range encodings {
 					line = strings.ReplaceAll(line, ",", "")
+					// For the time being accept gzip compression
 					if strings.ToLower(line) == "gzip" {
 						acceptEncoding = "gzip"
 					}
@@ -238,11 +241,18 @@ func respond200App(connection net.Conn, content string) {
 }
 
 func respond200Encode(connection net.Conn, content string, encode string) {
+	//gzip encode
+	var buffer bytes.Buffer
+	writer := gzip.NewWriter(&buffer)
+	writer.Write([]byte(content))
+	writer.Close()
+	encodedContent := buffer.String()
+
 	response := STATUS_200_OK
 	encoding := CONTENT_ENCODING + encode + END_HEADER_LINE
 	cType := CONTENT_PLAIN
-	length := CONTENT_LENGTH + strconv.Itoa(len(content)) + END_HEADER_BLOCK
-	body := content
+	length := CONTENT_LENGTH + strconv.Itoa(len(encodedContent)) + END_HEADER_BLOCK
+	body := encodedContent
 
 	response = response + encoding + cType + length + body
 	_, err := connection.Write([]byte(response))
