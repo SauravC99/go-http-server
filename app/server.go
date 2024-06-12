@@ -32,6 +32,7 @@ const END_HEADER_BLOCK string = "\r\n\r\n"
 const CONTENT_LENGTH string = "Content-Length: "
 const CONTENT_TYPE string = "Content-Type: "
 const LOCATION_HEADER string = "Location: "
+const CONTENT_ENCODING string = "Content-Encoding: "
 
 func main() {
 	directoryPtr := flag.String("directory", "", "Directory for file hosting (download and upload)")
@@ -70,9 +71,15 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 		return
 	} else if strings.HasPrefix(headers.Path, "/echo/") {
 		//echo the request in body
-		content := strings.TrimPrefix(headers.Path, "/echo/")
-		respond200Plain(connection, content)
-		return
+		if strings.ToLower(headers.AcceptEncoding) == "invalid-encoding" || headers.AcceptEncoding == "" {
+			content := strings.TrimPrefix(headers.Path, "/echo/")
+			respond200Plain(connection, content)
+			return
+		} else {
+			content := strings.TrimPrefix(headers.Path, "/echo/")
+			respond200Encode(connection, content, headers.AcceptEncoding)
+			return
+		}
 	} else if strings.HasPrefix(headers.Path, "/user-agent") {
 		content := headers.Agent
 		respond200Plain(connection, content)
@@ -212,6 +219,21 @@ func respond200App(connection net.Conn, content string) {
 	body := content
 
 	response = response + length + body
+	_, err := connection.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+	}
+	connection.Close()
+}
+
+func respond200Encode(connection net.Conn, content string, encode string) {
+	response := STATUS_200_OK
+	encoding := CONTENT_ENCODING + encode + END_HEADER_LINE
+	cType := CONTENT_PLAIN
+	length := CONTENT_LENGTH + strconv.Itoa(len(content)) + END_HEADER_BLOCK
+	body := content
+
+	response = response + encoding + cType + length + body
 	_, err := connection.Write([]byte(response))
 	if err != nil {
 		fmt.Println("Error writing to connection: ", err.Error())
