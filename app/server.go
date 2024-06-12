@@ -10,13 +10,14 @@ import (
 )
 
 type RequestHeaders struct {
-	Method        string
-	Path          string
-	Host          string
-	Agent         string
-	ContentType   string
-	ContentLength string
-	Body          string
+	Method         string
+	Path           string
+	Host           string
+	Agent          string
+	ContentType    string
+	ContentLength  string
+	AcceptEncoding string
+	Body           string
 }
 
 const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
@@ -138,6 +139,7 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 	agent := ""
 	contentType := ""
 	contentLen := ""
+	acceptEncoding := ""
 	body := ""
 
 	for _, line := range request {
@@ -154,6 +156,9 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 		case strings.HasPrefix(line, "Content-Length:"):
 			temp := strings.Split(line, " ")
 			contentLen = temp[1]
+		case strings.HasPrefix(line, "Accept-Encoding:"):
+			temp := strings.Split(line, " ")
+			acceptEncoding = temp[1]
 		}
 	}
 	// headers section \r\n\r\n body section
@@ -163,13 +168,14 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 	}
 
 	return &RequestHeaders{
-		Method:        http_method,
-		Path:          path,
-		Host:          host,
-		Agent:         agent,
-		ContentType:   contentType,
-		ContentLength: contentLen,
-		Body:          body,
+		Method:         http_method,
+		Path:           path,
+		Host:           host,
+		Agent:          agent,
+		ContentType:    contentType,
+		ContentLength:  contentLen,
+		AcceptEncoding: acceptEncoding,
+		Body:           body,
 	}, nil
 }
 
