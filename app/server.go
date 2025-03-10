@@ -1,9 +1,8 @@
-package main
+package app
 
 import (
 	"bytes"
 	"compress/gzip"
-	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -11,61 +10,31 @@ import (
 	"strings"
 )
 
-type RequestHeaders struct {
-	Method         string
-	Path           string
-	Host           string
-	Agent          string
-	ContentType    string
-	ContentLength  string
-	AcceptEncoding string
-	Body           string
-}
+const (
+	STATUS_200_OK       string = "HTTP/1.1 200 OK\r\n"
+	STATUS_201_CREATED  string = "HTTP/1.1 201 Created\r\n"
+	STATUS_404_ERR      string = "HTTP/1.1 404 Not Found\r\n"
+	STATUS_405_NOTALLOW string = "HTTP/1.1 405 Method Not Allowed\r\n"
+	STATUS_500_ERR      string = "HTTP/1.1 500 Internal Server Error\r\n"
+	CONTENT_PLAIN       string = "Content-Type: text/plain\r\n"
+	CONTENT_APP         string = "Content-Type: application/octet-stream\r\n"
+	END_HEADER_LINE     string = "\r\n"
+	END_HEADER_BLOCK    string = "\r\n\r\n"
+	CONTENT_LENGTH      string = "Content-Length: "
+	CONTENT_TYPE        string = "Content-Type: "
+	LOCATION_HEADER     string = "Location: "
+	CONTENT_ENCODING    string = "Content-Encoding: "
+)
 
-const STATUS_200_OK string = "HTTP/1.1 200 OK\r\n"
-const STATUS_201_CREATED string = "HTTP/1.1 201 Created\r\n"
-const STATUS_404_ERR string = "HTTP/1.1 404 Not Found\r\n"
-const STATUS_405_NOTALLOW string = "HTTP/1.1 405 Method Not Allowed\r\n"
-const STATUS_500_ERR string = "HTTP/1.1 500 Internal Server Error\r\n"
-const CONTENT_PLAIN string = "Content-Type: text/plain\r\n"
-const CONTENT_APP string = "Content-Type: application/octet-stream\r\n"
-const END_HEADER_LINE string = "\r\n"
-const END_HEADER_BLOCK string = "\r\n\r\n"
-const CONTENT_LENGTH string = "Content-Length: "
-const CONTENT_TYPE string = "Content-Type: "
-const LOCATION_HEADER string = "Location: "
-const CONTENT_ENCODING string = "Content-Encoding: "
-
-func main() {
-	directoryPtr := flag.String("directory", "", "Directory for file hosting (download and upload)")
-	portPtr := flag.String("port", "4221", "Port to bind to")
-	flag.Parse()
-
-	fmt.Println("Server started")
-
-	listener, err := net.Listen("tcp", "0.0.0.0:"+*portPtr)
+func ConnectAndRespond(connection net.Conn, directoryPtr *string) {
+	response, err := processResponse(connection)
 	if err != nil {
-		fmt.Println("Failed to bind to port "+*portPtr, err.Error())
-		os.Exit(1)
+		fmt.Println("Failed process response: ", err.Error())
 	}
-	fmt.Println("Listening on port " + *portPtr)
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
-		}
-
-		fmt.Println("Connection accept")
-		go connectAndRespond(conn, directoryPtr)
-	}
-}
-
-func connectAndRespond(connection net.Conn, directoryPtr *string) {
-	headers, err := parseHeaders(connection)
+	headers, err := parseHeaders(response)
 	if err != nil {
-		fmt.Println("Failed to read headers: ", err.Error())
+		fmt.Println("Failed to parse headers: ", err.Error())
 	}
 
 	if headers.Path == "/" {
@@ -129,7 +98,7 @@ func connectAndRespond(connection net.Conn, directoryPtr *string) {
 	}
 }
 
-func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
+func processResponse(connection net.Conn) ([]byte, error) {
 	recievedData := make([]byte, 1024)
 
 	_, err := connection.Read(recievedData)
@@ -138,6 +107,10 @@ func parseHeaders(connection net.Conn) (*RequestHeaders, error) {
 		return nil, err
 	}
 
+	return recievedData, nil
+}
+
+func parseHeaders(recievedData []byte) (*RequestHeaders, error) {
 	request := strings.Split(string(recievedData), END_HEADER_LINE)
 
 	start_line := strings.Split(request[0], " ")

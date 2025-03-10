@@ -1,4 +1,4 @@
 set -e
 tmpFile=$(mktemp)
-go build -o "$tmpFile" app/*.go
+go build -o "$tmpFile" main.go
 exec "$tmpFile" "$@"

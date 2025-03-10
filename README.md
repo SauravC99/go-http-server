@@ -13,7 +13,7 @@ git clone https://github.com/SauravC99/go-http-server.git
 
 Compile the program:
 ```
-go build app/server.go
+go build main.go
 ```
 
 ### Alternate Installation
