@@ -1,5 +1,7 @@
 # go-http-server
 
+> http server written in Go
+
 go-http-server is a HTTP server written in GoLang. By default the server will run on localhost with port 4221, and an option to specify which port to bind to.
 
 It is able to handle multiple requests concurrently using Goroutines. It handles downloading and uploading data to the server by the way of GET and POST requests.
