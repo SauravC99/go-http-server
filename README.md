@@ -89,3 +89,93 @@ The server supports the following endpoints.
   - If the operation fails, returns `500 Internal Server Error`.
 
 Note the `/files` endpoint requires the `-directory` flag to be set.
+
+
+## Examples
+Here are some example interactions with the server using `curl`:
+
+- **Root Request**
+```bash
+curl -v http://localhost:4221/
+```
+```bash
+< HTTP/1.1 200 OK
+< Content-Type: text/plain
+< Content-Length: 0
+<
+```
+
+- **Echo Request**
+```bash
+curl -v http://localhost:4221/echo/hello123
+```
+```bash
+< HTTP/1.1 200 OK
+< Content-Type: text/plain
+< Content-Length: 10
+<
+hello123
+```
+
+- **Echo Request with gzip compression**
+```bash
+curl -v -H "Accept-Encoding: gzip" http://localhost:4221/echo/HelloWorld
+```
+```bash
+< HTTP/1.1 200 OK
+< Content-Encoding: gzip
+< Content-Type: text/plain
+< Content-Length: 34
+<
+��H����/�I��y
+             ww
+```
+
+- **User-Agent Request**
+```bash
+curl -v -A "MyCustomAgent" http://localhost:4221/user-agent
+```
+```bash
+< HTTP/1.1 200 OK
+< Content-Type: text/plain
+< Content-Length: 13
+<
+MyCustomAgent
+```
+
+- **File GET Request**
+```bash
+curl -v http://localhost:4221/files/hello.txt
+```
+```bash
+< HTTP/1.1 200 OK
+< Content-Type: application/octet-stream
+< Content-Length: 37
+<
+HELLO WORLD This is my file with data
+```
+If the file does not exist you get `404 Not Found`:
+```bash
+curl -v http://localhost:4221/files/randomfile.txt
+```
+```bash
+< HTTP/1.1 404 Not Found
+<
+```
+
+- **File POST Request**
+```bash
+curl -X POST -d "content or file to send" http://localhost:4221/files/newfile.txt
+```
+```bash
+< HTTP/1.1 201 Created
+< Content-Type: application/x-www-form-urlencoded
+< Location: ./newfile.txt
+<
+content or file to send
+```
+If you try to write a file without the `-directory` flag set you get a `500 Internal Server Error`:
+```bash
+< HTTP/1.1 500 Internal Server Error
+<
+```
